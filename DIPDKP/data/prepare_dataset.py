@@ -136,6 +136,7 @@ def generate_dataset(images_path, out_path_im, out_path_ker, k_size, scale_facto
         im = np.array(Image.open(path).convert('RGB')).astype(np.float32) / 255.
 
         im = modcrop(im, scale_factor[0])
+        # im=modcrop(im,32)
 
         if kernelgan_x4:
             # As in original kernelgan, for x4, we use analytic kernel calculated from x2.

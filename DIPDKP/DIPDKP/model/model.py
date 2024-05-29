@@ -5,7 +5,7 @@ import numpy as np
 import sys
 import tqdm
 import os
-
+import torch.nn as nn
 import math
 import matplotlib.pyplot as plt
 from .networks import skip, fcn
@@ -15,12 +15,12 @@ import xlwt
 from torch import optim
 import torch.nn.utils as nutils
 from scipy.signal import convolve2d
-
 sys.path.append('../')
 from .util import evaluation_image, get_noise, move2cpu, calculate_psnr, save_final_kernel_png, tensor2im01, calculate_parameters
 from .kernel_generate import gen_kernel_random, gen_kernel_random_motion, make_gradient_filter, ekp_kernel_generator
 
 sys.path.append('../../')
+
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -32,7 +32,23 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 
+class TVLoss(nn.Module):
+    def __init__(self, weight: float=1, beta: float = 1) -> None:
+        """Total Variation Loss
 
+        Args:
+            weight (float): weight of TV loss
+        """
+        super().__init__()
+        self.weight = weight
+        self.beta = beta
+    
+    def forward(self, x):
+        batch_size, c, h, w = x.size()
+        tv_h = torch.abs(x[:,:,1:,:] - x[:,:,:-1,:]).sum()
+        tv_w = torch.abs(x[:,:,:,1:] - x[:,:,:,:-1]).sum()
+        res = self.weight * (tv_h + tv_w) / (batch_size * c * h * w)
+        return res ** (self.beta)
 
 
 class DIPDKP:
@@ -72,7 +88,7 @@ class DIPDKP:
         # E Kernel Prior
         l1 = 1 / (self.sf * 1.00)
         self.kernel_code = torch.tensor([[l1,  0.0],
-                                         [0.0, l1]], dtype=torch.float32).cuda()
+                                         [0.0, l1]], dtype=torch.float32).to(self.device)
         self.kernel_code.requires_grad = True
         self.optimizer_kernel = optim.Adam(params=[self.kernel_code,], lr=5e-3)
 
@@ -97,7 +113,7 @@ class DIPDKP:
                 'Kernel']
 
         self.kernel_random = torch.from_numpy(kernel_random).type(torch.FloatTensor).to(
-            torch.device('cuda')).unsqueeze(0).unsqueeze(0)
+            self.device).unsqueeze(0).unsqueeze(0)
 
     def MC_warm_up(self):
         if (self.conf.model == 'DIPDKP' or self.conf.model == 'DIPDKP-motion' or self.conf.model == 'DIPDKP-random-motion'): # and iteration == 0
@@ -165,7 +181,7 @@ class DIPDKP:
         self.sheet.write((self.iteration * self.conf.I_loop_x + i_p) + 1, 3, '%.2f' % kernel_psnr, black_style)
         self.wb.save(self.conf.output_dir_path + "/" + self.conf.img_name + '.xls')
 
-    def __init__(self, conf, lr, hr, device=torch.device('cuda')):
+    def __init__(self, conf, lr, hr, device):
 
         # Acquire configuration
         self.conf = conf
@@ -178,7 +194,7 @@ class DIPDKP:
         self.k_size = np.array(
             [min(self.sf * 4 + 3, 21),
              min(self.sf * 4 + 3, 21)])  # 11x11, 15x15, 19x19, 21x21 for x2, x3, x4, x8
-
+        self.device=device
         # DIP model
         _, C, H, W = self.lr.size()
         self.input_dip = get_noise(C, 'noise', (H * self.sf, W * self.sf)).to(device).detach()
@@ -205,6 +221,8 @@ class DIPDKP:
         # loss setting
         self.ssimloss = SSIM().to(device)
         self.mse = torch.nn.MSELoss().to(device)
+        self.tv=TVLoss().to(device)
+        self.l1=torch.nn.L1Loss().to(device)
         self.KLloss = torch.nn.KLDivLoss(reduction='mean').to(device)
 
         print('*' * 60 + '\nSTARTED {} on: {}...'.format(conf.model, conf.input_image_path))
@@ -302,13 +320,14 @@ class DIPDKP:
                     # adding image disturbance
                     disturb = np.random.normal(0, np.random.uniform(0, self.conf.Image_disturbance), out_x.shape)
                     disturb_tc = torch.from_numpy(disturb).type(torch.FloatTensor).to(
-                        torch.device('cuda'))
+                        self.device)
 
                     # first use SSIM because it helps the model converge faster
                     if self.iteration <= 80:  #80 for DIPDKP
                         loss_x = 1 - self.ssimloss(out_x, self.lr + disturb_tc)
                     else:
-                        loss_x = self.mse(out_x, self.lr + disturb_tc)
+                        loss_x = self.l1(out_x,self.lr + disturb_tc)
+                        # loss_x = self.mse(out_x, self.lr + disturb_tc)
 
                     self.im_HR_est = sr
                     grad_loss = self.conf.grad_loss_lr * self.noise2_mean * 0.20 * torch.pow(
@@ -327,7 +346,8 @@ class DIPDKP:
                     if self.iteration <= 80:  #80 for DIPDKP
                         loss_k = 1 - self.ssimloss(out_k, self.lr)
                     else:
-                        loss_k = self.mse(out_k, self.lr)
+                        loss_k =self.l1(out_k,self.lr)+0.05*self.tv(out_k)
+                        # loss_k = self.mse(out_k, self.lr)
 
                     ac_loss_k = ac_loss_k + loss_k
                     # loss_k.backward(retain_graph=True)

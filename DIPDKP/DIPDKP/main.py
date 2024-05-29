@@ -23,10 +23,10 @@ from NonblindSR.usrnet import USRNet
 # main.py for DIP-KP
 # ------------------------------------------------
 '''
-
+device=torch.device('cuda')
 def train(conf, lr_image, hr_image):
     ''' trainer for DIPDKP, etc.'''
-    model = DIPDKP(conf, lr_image, hr_image)
+    model = DIPDKP(conf, lr_image, hr_image,device=device)
     kernel, sr = model.train()
     return kernel, sr
 def create_params(filename, args):
@@ -65,7 +65,8 @@ def main():
                 for j in range(len(D_loops)):
                     D_loop = D_loops[j]
                     datasets = []
-                    datasets.append('Set5')
+                    # datasets.append('Set5')
+                    datasets.append('test')
 
                     for k in range(len(datasets)):
                         dataset = datasets[k]
@@ -97,7 +98,7 @@ def main():
                                 netG.eval()
                                 for key, v in netG.named_parameters():
                                     v.requires_grad = False
-                                netG = netG.cuda()
+                                netG = netG.to(device)
 
                             args.input_dir = '../data/datasets/{}/DIPDKP_lr_x{}'.format(args.dataset, args.sf)
                             filesource = os.listdir(os.path.abspath(args.input_dir)) #
@@ -144,7 +145,7 @@ def main():
                                     kernel = map2tensor(kernel)
 
                                     sr = netG(lr_image, torch.flip(kernel, [2, 3]), int(args.sf),
-                                              (10 if args.real else 0) / 255 * torch.ones([1, 1, 1, 1]).cuda())
+                                              (10 if args.real else 0) / 255 * torch.ones([1, 1, 1, 1]).to(device))
                                     plt.imsave(os.path.join(conf.output_dir_path, '%s.png' % conf.img_name), tensor2im01(sr), vmin=0,
                                                vmax=1., dpi=1)
 
@@ -155,6 +156,7 @@ def main():
 
 if __name__ == '__main__':
     seed = 0
+    torch.cuda.empty_cache()
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
