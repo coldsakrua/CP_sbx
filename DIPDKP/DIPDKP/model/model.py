@@ -16,7 +16,7 @@ from torch import optim
 import torch.nn.utils as nutils
 from scipy.signal import convolve2d
 sys.path.append('../')
-from .util import evaluation_image, get_noise, move2cpu, calculate_psnr, save_final_kernel_png, tensor2im01, calculate_parameters
+from .util import evaluation_image, get_noise, move2cpu, calculate_psnr, save_final_kernel_png, tensor2im01, calculate_parameters,calculate_ssim
 from .kernel_generate import gen_kernel_random, gen_kernel_random_motion, make_gradient_filter, ekp_kernel_generator
 
 sys.path.append('../../')
@@ -127,7 +127,7 @@ class DIPDKP:
 
                 self.MCMC_sampling()
 
-                lossk = self.mse(self.kernel_random, kernel)
+                lossk = self.l1(self.kernel_random, kernel)
 
                 # lossk = self.KLloss(kernel, kernel_random) + self.conf.jj_kl * self.KLloss(kernel_random, kernel)
                 lossk.backward(retain_graph=True)
@@ -197,14 +197,14 @@ class DIPDKP:
         self.device=device
         # DIP model
         _, C, H, W = self.lr.size()
-        self.input_dip = get_noise(C, 'noise', (H * self.sf, W * self.sf)).to(device).detach()
+        self.input_dip = get_noise(C, 'noise', (H * self.sf, W * self.sf),var=1/30).to(device).detach()
         self.lr_scaled = F.interpolate(self.lr, size=[H * self.sf, W * self.sf], mode='bicubic', align_corners=False)
         # self.input_dip = self.lr_scaled
         self.input_dip.requires_grad = False
         self.net_dip = skip(C, 3,
-                            num_channels_down=[128, 128, 128, 128, 128],
-                            num_channels_up=[128, 128, 128, 128, 128],
-                            num_channels_skip=[16, 16, 16, 16, 16],
+                            num_channels_down=[128, 128, 128, 256, 256],
+                            num_channels_up=[128, 128, 128, 256, 256],
+                            num_channels_skip=[16, 16, 16, 16, 32],
                             upsample_mode='bilinear',
                             need_sigmoid=True, need_bias=True, pad='reflection', act_fun='LeakyReLU')
         self.net_dip = self.net_dip.to(device)
@@ -242,7 +242,7 @@ class DIPDKP:
 
     def train(self):
 
-        self.print_and_output_setting()
+        # self.print_and_output_setting()
 
         _, C, H, W = self.lr.size()
 
@@ -253,7 +253,7 @@ class DIPDKP:
             kernel_gt = np.zeros([self.kernel_size, self.kernel_size])
 
         self.MC_warm_up()
-
+        ssim_list=[]
         for self.iteration in tqdm.tqdm(range(self.conf.max_iters), ncols=60):
 
             if self.conf.model == 'DIPDKP':
@@ -365,8 +365,7 @@ class DIPDKP:
                     # print and output
                     if (((self.iteration * self.conf.I_loop_x + i_p) + 1) % self.conf.Print_iteration == 0 or (
                             (self.iteration * self.conf.I_loop_x + i_p) + 1) == 1):
-                        self.print_and_output(sr, kernel, kernel_gt, loss_x, i_p)
-
+                        self.print_and_output(sr, kernel, kernel_gt, loss_x, i_p)    
         kernel = move2cpu(kernel.squeeze())
 
         save_final_kernel_png(kernel, self.conf, self.conf.kernel_gt)
@@ -375,7 +374,7 @@ class DIPDKP:
             print('{} estimation complete! (see --{}-- folder)\n'.format(self.conf.model,
                                                                          self.conf.output_dir_path) + '*' * 60 + '\n\n')
 
-        return kernel, sr   # sr, self.lagd_y
+        return kernel, sr,ssim_list   # sr, self.lagd_y
 
 
 class SphericalOptimizer(torch.optim.Optimizer):
