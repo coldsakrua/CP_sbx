@@ -1,6 +1,6 @@
-image_num:{baby.png}	PSNR:{34.41}	SSIM:{0.9093}	PSNR_KERNEL:{53.58}
-image_num:{bird.png}	PSNR:{34.18}	SSIM:{0.9420}	PSNR_KERNEL:{106.79}
-image_num:{butterfly.png}	PSNR:{29.37}	SSIM:{0.9272}	PSNR_KERNEL:{163.13}
-image_num:{head.png}	PSNR:{33.54}	SSIM:{0.8336}	PSNR_KERNEL:{202.57}
-image_num:{woman.png}	PSNR:{31.91}	SSIM:{0.9373}	PSNR_KERNEL:{251.28}
-*****Average Result: image_num:{5}	PSNR:{32.68}	SSIM:{0.9099}	kernelPSNR:{50.2558}*****
+image_num:{baby.png}	PSNR:{34.85}	SSIM:{0.9219}	PSNR_KERNEL:{58.90}
+image_num:{bird.png}	PSNR:{34.66}	SSIM:{0.9502}	PSNR_KERNEL:{112.94}
+image_num:{butterfly.png}	PSNR:{28.11}	SSIM:{0.9214}	PSNR_KERNEL:{165.44}
+image_num:{head.png}	PSNR:{33.44}	SSIM:{0.8454}	PSNR_KERNEL:{209.87}
+image_num:{woman.png}	PSNR:{32.58}	SSIM:{0.9447}	PSNR_KERNEL:{264.85}
+*****Average Result: image_num:{5}	PSNR:{32.73}	SSIM:{0.9167}	kernelPSNR:{52.9697}*****

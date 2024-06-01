@@ -242,7 +242,7 @@ class DIPDKP:
 
     def train(self):
 
-        # self.print_and_output_setting()
+        self.print_and_output_setting()
 
         _, C, H, W = self.lr.size()
 
@@ -254,6 +254,7 @@ class DIPDKP:
 
         self.MC_warm_up()
         ssim_list=[]
+        psnr_list=[]
         for self.iteration in tqdm.tqdm(range(self.conf.max_iters), ncols=60):
 
             if self.conf.model == 'DIPDKP':
@@ -323,12 +324,12 @@ class DIPDKP:
                         self.device)
 
                     # first use SSIM because it helps the model converge faster
-                    if self.iteration <= 80:  #80 for DIPDKP
-                        loss_x = 1 - self.ssimloss(out_x, self.lr + disturb_tc)
-                    else:
-                        loss_x = self.l1(out_x,self.lr + disturb_tc)
-                        # loss_x = self.mse(out_x, self.lr + disturb_tc)
-
+                    # if self.iteration <= 80:  #80 for DIPDKP
+                    #     loss_x = 1 - self.ssimloss(out_x, self.lr + disturb_tc)+0.1*self.l1(out_x,self.lr + disturb_tc)
+                    # else:
+                    #     # loss_x = self.l1(out_x,self.lr + disturb_tc)
+                    #     loss_x = self.mse(out_x, self.lr + disturb_tc)
+                    loss_x = 1 - self.ssimloss(out_x, self.lr + disturb_tc)+0.5*self.l1(out_x,self.lr + disturb_tc)
                     self.im_HR_est = sr
                     grad_loss = self.conf.grad_loss_lr * self.noise2_mean * 0.20 * torch.pow(
                         self.calculate_grad_abs() + 1e-8, 0.67).sum() / self.num_pixels
@@ -343,12 +344,12 @@ class DIPDKP:
                     out_k = F.conv2d(sr_pad.clone().detach(), kernel.expand(3, -1, -1, -1), groups=3)
                     out_k = out_k[:, :, 0::self.sf, 0::self.sf]
 
-                    if self.iteration <= 80:  #80 for DIPDKP
-                        loss_k = 1 - self.ssimloss(out_k, self.lr)
-                    else:
-                        loss_k =self.l1(out_k,self.lr)+0.05*self.tv(out_k)
-                        # loss_k = self.mse(out_k, self.lr)
-
+                    # if self.iteration <= 80:  #80 for DIPDKP
+                    #     loss_k = 1 - self.ssimloss(out_k, self.lr)
+                    # else:
+                    #     # loss_k =self.l1(out_k,self.lr)+0.05*self.tv(out_k)
+                    #     loss_k = self.mse(out_k, self.lr)
+                    loss_k = 1 - self.ssimloss(out_k, self.lr)+0.2*self.l1(out_k,self.lr)+0.05*self.tv(out_k)
                     ac_loss_k = ac_loss_k + loss_k
                     # loss_k.backward(retain_graph=True)
                     # loss_k.detach()
@@ -365,7 +366,20 @@ class DIPDKP:
                     # print and output
                     if (((self.iteration * self.conf.I_loop_x + i_p) + 1) % self.conf.Print_iteration == 0 or (
                             (self.iteration * self.conf.I_loop_x + i_p) + 1) == 1):
-                        self.print_and_output(sr, kernel, kernel_gt, loss_x, i_p)    
+                        self.print_and_output(sr, kernel, kernel_gt, loss_x, i_p) 
+                    image_psnr, image_ssim = evaluation_image(self.hr, sr, self.sf)
+                    ssim_list.append(image_ssim)
+                    psnr_list.append(image_psnr)
+        plt.figure()
+        plt.plot([x for x in range(1000)],ssim_list)
+        plt.title('ssim_{}'.format(max(ssim_list)))
+        plt.savefig(os.path.join(self.conf.output_dir_path,
+                                '{}_ssim_ft.png'.format(self.conf.img_name)))
+        plt.figure()
+        plt.plot([x for x in range(1000)],psnr_list)
+        plt.title('psnr_{}'.format(max(psnr_list)))
+        plt.savefig(os.path.join(self.conf.output_dir_path,
+                                '{}_psnr_ft.png'.format(self.conf.img_name)))
         kernel = move2cpu(kernel.squeeze())
 
         save_final_kernel_png(kernel, self.conf, self.conf.kernel_gt)

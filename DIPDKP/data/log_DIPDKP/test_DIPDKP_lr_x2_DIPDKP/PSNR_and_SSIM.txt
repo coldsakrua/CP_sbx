@@ -1,6 +1,6 @@
-image_num:{cloud.png}	PSNR:{33.21}	SSIM:{0.8909}	PSNR_KERNEL:{49.34}
-image_num:{road.png}	PSNR:{28.03}	SSIM:{0.8504}	PSNR_KERNEL:{98.96}
-image_num:{school.png}	PSNR:{31.88}	SSIM:{0.9182}	PSNR_KERNEL:{155.82}
-image_num:{tree.png}	PSNR:{24.74}	SSIM:{0.7379}	PSNR_KERNEL:{209.99}
-image_num:{wall.png}	PSNR:{27.92}	SSIM:{0.8844}	PSNR_KERNEL:{253.97}
-*****Average Result: image_num:{5}	PSNR:{29.16}	SSIM:{0.8563}	kernelPSNR:{50.7949}*****
+image_num:{cloud.png}	PSNR:{33.07}	SSIM:{0.9022}	PSNR_KERNEL:{48.46}
+image_num:{road.png}	PSNR:{28.57}	SSIM:{0.8620}	PSNR_KERNEL:{100.70}
+image_num:{school.png}	PSNR:{32.36}	SSIM:{0.9275}	PSNR_KERNEL:{156.83}
+image_num:{tree.png}	PSNR:{25.05}	SSIM:{0.7497}	PSNR_KERNEL:{213.01}
+image_num:{wall.png}	PSNR:{28.25}	SSIM:{0.8915}	PSNR_KERNEL:{258.24}
+*****Average Result: image_num:{5}	PSNR:{29.46}	SSIM:{0.8666}	kernelPSNR:{51.6481}*****
