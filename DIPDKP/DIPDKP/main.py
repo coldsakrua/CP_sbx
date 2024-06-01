@@ -66,7 +66,7 @@ def main():
                     D_loop = D_loops[j]
                     datasets = []
                     # datasets.append('Set5')
-                    datasets.append('test')
+                    datasets.append('data')
 
                     for k in range(len(datasets)):
                         dataset = datasets[k]

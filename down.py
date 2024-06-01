@@ -22,13 +22,15 @@ def get_kernel(kernel_width=5, sigma=0.5):
     return kernel
 
 if __name__=='__main__':
-    path='/home/liyang/dip/DKP/DIPDKP/data/datasets/test/HR'
-    output='/home/liyang/dip/DKP/DIPDKP/data/datasets/test/HR'
+    path='DIPDKP/data/datasets/data/HR1'
+    output='DIPDKP/data/datasets/data/HR'
     imgs=os.listdir(path)
+    
     # kernel=get_kernel(kernel_width=3)
     for img in imgs:
-        if img[-3:]!='png':
-            continue
+        # if img[-3:]!='png' or img[-3:]!='jpg':
+            
+        #     continue
         img_name=img
         
         print(img_name)
@@ -51,4 +53,4 @@ if __name__=='__main__':
             d=int((h-l)/2)
             img2=img2[:,d:d+l,:]
 
-        cv2.imwrite(output+'/'+img_name,img2)
+        cv2.imwrite(output+'/'+img_name[:-4]+'.png',img2)
