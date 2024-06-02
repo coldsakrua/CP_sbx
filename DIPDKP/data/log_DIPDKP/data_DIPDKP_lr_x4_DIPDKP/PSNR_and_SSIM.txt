@@ -1,0 +1,8 @@
+image_num:{1.png}	PSNR:{35.11}	SSIM:{0.9234}	PSNR_KERNEL:{58.48}
+image_num:{2.png}	PSNR:{31.02}	SSIM:{0.9024}	PSNR_KERNEL:{116.35}
+image_num:{3.png}	PSNR:{25.45}	SSIM:{0.6830}	PSNR_KERNEL:{169.98}
+image_num:{4.png}	PSNR:{28.23}	SSIM:{0.6579}	PSNR_KERNEL:{225.51}
+image_num:{5.png}	PSNR:{22.52}	SSIM:{0.5336}	PSNR_KERNEL:{275.36}
+image_num:{6.png}	PSNR:{22.03}	SSIM:{0.3505}	PSNR_KERNEL:{324.96}
+image_num:{7.png}	PSNR:{24.64}	SSIM:{0.4667}	PSNR_KERNEL:{376.31}
+*****Average Result: image_num:{7}	PSNR:{27.00}	SSIM:{0.6454}	kernelPSNR:{53.7582}*****

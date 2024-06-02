@@ -1,0 +1,6 @@
+image_num:{cat.png}	PSNR:{38.23}	SSIM:{0.9393}	PSNR_KERNEL:{50.57}
+image_num:{chongqing.png}	PSNR:{26.85}	SSIM:{0.8682}	PSNR_KERNEL:{90.84}
+image_num:{crowd.png}	PSNR:{28.47}	SSIM:{0.9155}	PSNR_KERNEL:{142.20}
+image_num:{school.png}	PSNR:{27.06}	SSIM:{0.8772}	PSNR_KERNEL:{193.59}
+image_num:{step.png}	PSNR:{33.45}	SSIM:{0.9171}	PSNR_KERNEL:{250.85}
+*****Average Result: image_num:{5}	PSNR:{30.81}	SSIM:{0.9035}	kernelPSNR:{50.1694}*****

@@ -22,15 +22,15 @@ def get_kernel(kernel_width=5, sigma=0.5):
     return kernel
 
 if __name__=='__main__':
-    path='DIPDKP/data/datasets/data/HR1'
-    output='DIPDKP/data/datasets/data/HR'
+    path='DIPDKP/data/datasets/data1/HR'
+    output='DIPDKP/data/datasets/data1/HR'
     imgs=os.listdir(path)
     
     # kernel=get_kernel(kernel_width=3)
     for img in imgs:
-        # if img[-3:]!='png' or img[-3:]!='jpg':
+        if img[-3:]!='png' and img[-3:]!='jpg':
             
-        #     continue
+            continue
         img_name=img
         
         print(img_name)
@@ -45,7 +45,7 @@ if __name__=='__main__':
 
         img2=img2[:w-w%32,:h-h%32,:]
         w,h,_=img2.shape
-        l=480
+        l=640
         if w>l:
             d=int((w-l)/2)
             img2=img2[d:d+l,:,:]
