@@ -22,8 +22,8 @@ def get_kernel(kernel_width=5, sigma=0.5):
     return kernel
 
 if __name__=='__main__':
-    path='DIPDKP/data/datasets/data1/HR'
-    output='DIPDKP/data/datasets/data1/HR'
+    path='DIPDKP/data/datasets/idol/HR'
+    output='DIPDKP/data/datasets/idol/HR'
     imgs=os.listdir(path)
     
     # kernel=get_kernel(kernel_width=3)
@@ -45,12 +45,15 @@ if __name__=='__main__':
 
         img2=img2[:w-w%32,:h-h%32,:]
         w,h,_=img2.shape
+        
         l=640
         if w>l:
             d=int((w-l)/2)
             img2=img2[d:d+l,:,:]
+            # img2=img2[:l,:,:]
         if h>l:
             d=int((h-l)/2)
+            # img2=img2[:,:l,:]
             img2=img2[:,d:d+l,:]
 
         cv2.imwrite(output+'/'+img_name[:-4]+'.png',img2)

@@ -27,8 +27,8 @@ device=torch.device('cuda')
 def train(conf, lr_image, hr_image):
     ''' trainer for DIPDKP, etc.'''
     model = DIPDKP(conf, lr_image, hr_image,device=device)
-    kernel, sr, ssim_list = model.train()
-    return kernel, sr,ssim_list
+    kernel, sr= model.train()
+    return kernel, sr
 def create_params(filename, args):
     ''' pass parameters to Config '''
     params = ['--model', args.model,
@@ -65,7 +65,7 @@ def main():
                 for j in range(len(D_loops)):
                     D_loop = D_loops[j]
                     datasets = []
-                    datasets.append('data1')
+                    datasets.append('idol')
                     # datasets.append('data2')
 
                     for k in range(len(datasets)):
@@ -134,7 +134,7 @@ def main():
                                     conf.crop = crop
 
                                 strat_time = time.time()
-                                kernel, sr_dip, ssim_list = train(conf, lr_image, hr_image)
+                                kernel, sr_dip = train(conf, lr_image, hr_image)
                                 Runtime = time.time() - strat_time
                                 # print("method:", method, "Runtime:", "%.2f" % Runtime)
                                 plt.imsave(os.path.join(conf.output_dir_path, '%s.png' % conf.img_name), tensor2im01(sr_dip), vmin=0,

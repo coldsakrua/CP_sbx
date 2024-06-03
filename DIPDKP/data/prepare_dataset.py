@@ -10,8 +10,7 @@ from PIL import Image
 import torch
 import torch.nn.functional as F
 import argparse
-
-
+import cv2
 # Function for centering a kernel
 def kernel_shift(kernel, sf):
     # First calculate the current center of mass for the kernel
@@ -29,6 +28,52 @@ def kernel_shift(kernel, sf):
     # Finally shift the kernel and return
     return shift(kernel, shift_vec)
 
+
+def rotate(image, angle, center=None, scale=1.0):
+    # grab the dimensions of the image
+    (h, w) = image.shape[:2]
+
+    # if the center is None, initialize it as the center of
+    # the image
+    if center is None:
+        center = (w // 2, h // 2)
+
+    # perform the rotation
+    M = cv2.getRotationMatrix2D(center, angle, scale)
+    rotated = cv2.warpAffine(image, M, (w, h))
+
+    # return the rotated image
+    return rotated
+
+
+
+def gen_kernel_motion_fixed(k_size, sf, lens, theta, noise):
+
+    # kernel_size = min(sf * 4 + 3, 21)
+    kernel_size = k_size[0]
+    M = int((sf * 3 + 3) / 2)
+    kernel_init = np.zeros([min(sf * 4 + 3, 21), min(sf * 4 + 3, 21)])
+    # kernel_init[M-1:M+1,M-len:M-len] = 1
+    kernel_init[M:M + 1, M - lens:M + lens + 1] = 1
+    kernel = kernel_init + noise
+    center = ((sf * 3 + 3) / 2, (sf * 3 + 3) / 2)
+    kernel = rotate(kernel, theta, center, scale=1.0)
+
+    kernel = kernel / np.sum(kernel)
+
+    return kernel
+
+
+
+def gen_kernel_random_motion(k_size, scale_factor, lens, noise_level):
+    # lambda_1 = min_var + np.random.rand() * (max_var - min_var);
+    # lambda_2 = min_var + np.random.rand() * (max_var - min_var);
+    theta = np.random.rand() * 360  # np.pi
+    noise = -noise_level + np.random.rand(*k_size) * noise_level * 2
+
+    kernel = gen_kernel_motion_fixed(k_size, scale_factor, lens, theta, noise)
+
+    return kernel
 
 # Function for calculating the X4 kernel from the X2 kernel, used in KernelGAN
 def analytic_kernel(k):
@@ -89,6 +134,17 @@ def gen_kernel_random(k_size, scale_factor, min_var, max_var, noise_level):
     return kernel
 
 
+
+def gen_kernel_random_motion(k_size, scale_factor, lens, noise_level):
+    # lambda_1 = min_var + np.random.rand() * (max_var - min_var);
+    # lambda_2 = min_var + np.random.rand() * (max_var - min_var);
+    theta = np.random.rand() * 360  # np.pi
+    noise = -noise_level + np.random.rand(*k_size) * noise_level * 2
+
+    kernel = gen_kernel_motion_fixed(k_size, scale_factor, lens, theta, noise)
+
+    return kernel
+
 # Function for degrading one image
 def degradation(input, kernel, scale_factor, noise_im, device=torch.device('cuda')):
     # preprocess image and kernel
@@ -123,7 +179,7 @@ def modcrop(img_in, scale):
 
 
 def generate_dataset(images_path, out_path_im, out_path_ker, k_size, scale_factor, min_var, max_var, noise_ker,
-                     noise_im, kernelgan_x4=False):
+                     noise_im, kernelgan_x4=False,model='gaussian'):
     os.makedirs(out_path_im, exist_ok=True)
     os.makedirs(out_path_ker, exist_ok=True)
 
@@ -137,15 +193,24 @@ def generate_dataset(images_path, out_path_im, out_path_ker, k_size, scale_facto
 
         im = modcrop(im, scale_factor[0])
         # im=modcrop(im,32)
+        if model!='motion':
+            if kernelgan_x4:
+               
+                # As in original kernelgan, for x4, we use analytic kernel calculated from x2.
+                kernel = gen_kernel_random(k_size, 2, min_var, max_var, noise_ker)
+                kernel = analytic_kernel(kernel)
+                kernel = kernel_shift(kernel, 4)
+            else:
 
-        if kernelgan_x4:
-            # As in original kernelgan, for x4, we use analytic kernel calculated from x2.
-            kernel = gen_kernel_random(k_size, 2, min_var, max_var, noise_ker)
-            kernel = analytic_kernel(kernel)
-            kernel = kernel_shift(kernel, 4)
-        else:
-            kernel = gen_kernel_random(k_size, scale_factor, min_var, max_var, noise_ker)
+                kernel = gen_kernel_random(k_size, scale_factor, min_var, max_var, noise_ker)
 
+        if model=='motion':
+            # im = modcrop(im, scale_factor)
+            sf=scale_factor[0]
+            
+            lens = int((min(sf * 4 + 3, 21)) / 4)
+            kernel=gen_kernel_random_motion(k_size,sf,lens,noise_level=0)
+            # print('ffffff')
         lr = degradation(im, kernel, scale_factor, noise_im,
                          device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'))
 
@@ -182,7 +247,7 @@ def main():
     images_path = 'datasets/{}/HR/*.png'.format(opt.dataset)
     out_path_im = 'datasets/{}/{}_lr_x{}'.format(opt.dataset, opt.model, opt.sf)
     out_path_ker = 'datasets/{}/{}_gt_k_x{}'.format(opt.dataset, opt.model, opt.sf)
-
+    print(opt.model)
     if opt.model == 'DIPDKP':
         min_var = 0.175 * opt.sf
         max_var = min(2.5 * opt.sf, 10)
@@ -190,7 +255,14 @@ def main():
         k_size = np.array([min(opt.sf * 4 + 3, 21), min(opt.sf * 4 + 3, 21)]) # 11x11, 15x15, 19x19, 21x21 for x2, x3, x4, x8
         generate_dataset(images_path, out_path_im, out_path_ker, k_size, np.array([opt.sf, opt.sf]), min_var, max_var,
                          opt.noise_ker, opt.noise_im)
+    elif opt.model=='DIPDKP-motion':
 
+        min_var = 0.175 * opt.sf
+        max_var = min(2.5 * opt.sf, 10)
+
+        k_size = np.array([min(opt.sf * 4 + 3, 21), min(opt.sf * 4 + 3, 21)]) # 11x11, 15x15, 19x19, 21x21 for x2, x3, x4, x8
+        generate_dataset(images_path, out_path_im, out_path_ker, k_size, np.array([opt.sf, opt.sf]),min_var, max_var,
+                         opt.noise_ker, opt.noise_im,model='motion')
     else:
         raise NotImplementedError
 

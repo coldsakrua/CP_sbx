@@ -103,7 +103,8 @@ class DIPDKP:
         elif self.conf.model == 'DIPDKP-motion':
             lens = int((min(self.sf * 4 + 3, 21)) / 4)
             kernel_random = gen_kernel_random_motion(self.k_size, self.sf, lens, noise_level=0)
-
+            # print(kernel_random.shape)
+            # plt.imsave('/root/autodl-tmp/DKP/DIPDKP/data/datasets/idol/k.png',kernel_random)
         # random motion kernel
         elif self.conf.model == 'DIPDKP-random-motion':
             num = len(os.listdir(self.conf.motion_blur_path)) // 2
@@ -245,19 +246,19 @@ class DIPDKP:
         self.print_and_output_setting()
 
         _, C, H, W = self.lr.size()
-
+        self.MC_warm_up()
         path = os.path.join(self.conf.input_dir, self.conf.filename).replace('lr_x', 'gt_k_x').replace('.png', '.mat')
         if self.conf.real == False:
             kernel_gt = sio.loadmat(path)['Kernel']
         else:
             kernel_gt = np.zeros([self.kernel_size, self.kernel_size])
 
-        self.MC_warm_up()
+        
         ssim_list=[]
         psnr_list=[]
         for self.iteration in tqdm.tqdm(range(self.conf.max_iters), ncols=60):
 
-            if self.conf.model == 'DIPDKP':
+            if self.conf.model == 'DIPDKP' or self.conf.model=='DIPDKP-motion':
                 # zero loss and gradient
                 self.kernel_code.requires_grad = False
                 self.optimizer_kp.zero_grad()
@@ -285,6 +286,7 @@ class DIPDKP:
                 lossk = 0
                 for i in range(self.conf.D_loop):
                     # sum_exp_x_losses += math.exp(x_losses[i])
+                    min_x_loss = min(x_losses)
                     sum_exp_x_losses += (x_losses[i]-min(x_losses))
 
                 for i in range(self.conf.D_loop):
@@ -292,7 +294,13 @@ class DIPDKP:
                     k_loss_weights[i] = (-(1 - k_loss_probability[i])**2) * torch.log(k_loss_probability[i]+1e-3)
                     # k_loss_weights[i] = k_loss_probability[i]
                     lossk += k_loss_weights[i].clone().detach() * k_losses[i]
-
+                    # k_loss_probability[i] = math.exp(x_losses[i] - min_x_loss) / sum_exp_x_losses
+                    # k_loss_weights[i] = -torch.log(k_loss_probability[i] + 1e-5)  # 增加较小值防止log(0)
+                    # k_loss_weights[i] = k_loss_weights[i] / torch.sum(k_loss_weights)  # 归一化权重
+                    
+                    # lossk += k_loss_weights[i].clone().detach() * k_losses[i]
+                    
+                    
                 if self.conf.D_loop != 0:
                     lossk.backward(retain_graph=True)
                     lossk.detach()
@@ -364,7 +372,7 @@ class DIPDKP:
                         ac_loss_k = 0
 
                     # print and output
-                    if (((self.iteration * self.conf.I_loop_x + i_p) + 1) % self.conf.Print_iteration == 0 or (
+                    if (((self.iteration * self.conf.I_loop_x + i_p) + 1) % 40 == 0 or (
                             (self.iteration * self.conf.I_loop_x + i_p) + 1) == 1):
                         self.print_and_output(sr, kernel, kernel_gt, loss_x, i_p) 
                     image_psnr, image_ssim = evaluation_image(self.hr, sr, self.sf)
@@ -388,7 +396,7 @@ class DIPDKP:
             print('{} estimation complete! (see --{}-- folder)\n'.format(self.conf.model,
                                                                          self.conf.output_dir_path) + '*' * 60 + '\n\n')
 
-        return kernel, sr,ssim_list   # sr, self.lagd_y
+        return kernel, sr  # sr, self.lagd_y
 
 
 class SphericalOptimizer(torch.optim.Optimizer):
