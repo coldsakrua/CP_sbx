@@ -99,8 +99,10 @@ def main():
                                 for key, v in netG.named_parameters():
                                     v.requires_grad = False
                                 netG = netG.to(device)
-
-                            args.input_dir = '../data/datasets/{}/DIPDKP_lr_x{}'.format(args.dataset, args.sf)
+                            if args.model=='DIPDKP-motion':
+                                args.input_dir='../data/datasets/{}/DIPDKP-motion_lr_x{}'.format(args.dataset, args.sf)
+                            else:
+                                args.input_dir = '../data/datasets/{}/DIPDKP_lr_x{}'.format(args.dataset, args.sf)
                             filesource = os.listdir(os.path.abspath(args.input_dir)) #
                             filesource.sort()
                             now_time = str(datetime.datetime.now())[:-10].replace(':', '-')

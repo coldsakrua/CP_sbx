@@ -204,7 +204,7 @@ def generate_dataset(images_path, out_path_im, out_path_ker, k_size, scale_facto
 
                 kernel = gen_kernel_random(k_size, scale_factor, min_var, max_var, noise_ker)
 
-        if model=='motion':
+        else:
             # im = modcrop(im, scale_factor)
             sf=scale_factor[0]
             

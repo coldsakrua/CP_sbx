@@ -248,6 +248,7 @@ class DIPDKP:
         _, C, H, W = self.lr.size()
         self.MC_warm_up()
         path = os.path.join(self.conf.input_dir, self.conf.filename).replace('lr_x', 'gt_k_x').replace('.png', '.mat')
+        # print(path,self.conf.input_dir)
         if self.conf.real == False:
             kernel_gt = sio.loadmat(path)['Kernel']
         else:
